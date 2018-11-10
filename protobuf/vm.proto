@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package sreapi;
+
+message Virtualmachine {
+  string Api = 1;
+  string Hostname = 2;
+  string Project = 3;
+  string Role = 4;
+}
+
+
+message ListRequest{
+  string Api = 1;
+  string Project = 2;
+  string Role = 3;
+}
+
+message ListResponse {
+  string Api = 1;
+  repeated Virtualmachine Vms = 2;
+}
+
+message GetRequest {
+  string Api = 1;
+  string Hostname = 2;
+}
+
+message GetResponse {
+  string Api = 1;
+  Virtualmachine Vm = 2;
+}
+
+message CreateRequest {
+  string Api = 1;
+  string Hostname = 2;
+  string Project = 3;
+  string Role = 4;
+}
+
+message CreateResponse {
+  string Api = 1;
+  bool Success = 2;
+}
+
+message UpdateRequest {
+  string Api = 1;
+  string Hostname = 2;
+  string Project = 3;
+  string Role = 4;
+  string Newhostname = 5;
+
+}
+
+message UpdateResponse {
+  string Api = 1;
+  bool Success = 2;
+}
+
+message DeleteRequest {
+  string Api = 1;
+  string Hostname = 2;
+}
+
+message DeleteResponse {
+  string Api = 1;
+  bool Success = 2;
+}
+
+service Virtualmachines {
+  rpc List (ListRequest) returns (ListResponse) {}
+  rpc Get (GetRequest) returns (GetResponse) {}
+  rpc Create (CreateRequest) returns (CreateResponse) {}
+  rpc Update (UpdateRequest) returns (UpdateResponse) {}
+  rpc Delete (DeleteRequest) returns (DeleteResponse) {}
+}

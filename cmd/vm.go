@@ -1,0 +1,203 @@
+package cmd
+
+import (
+	"errors"
+	"github.com/spf13/cobra"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
+	"log"
+	pb "sreapi/protobuf"
+	"time"
+)
+
+var (
+	project string
+	role    string
+)
+
+// VMDeleteCommandFunc r
+func VMDeleteCommandFunc(cmd *cobra.Command, args []string) {
+	conn, err := grpc.Dial(host+port, grpc.WithInsecure())
+	defer conn.Close()
+	c := pb.NewVirtualmachinesClient(conn)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	r, err := c.Delete(ctx, &pb.DeleteRequest{Api: apiv, Hostname: args[0]})
+	if err != nil {
+		log.Fatalf("Could not delete vm: %v", err)
+	}
+	log.Print("Deleted: ", args[0], " Sucess: ", r.Success)
+}
+
+// VMUpdateCommandFunc r
+func VMUpdateCommandFunc(cmd *cobra.Command, args []string) {
+	conn, err := grpc.Dial(host+port, grpc.WithInsecure())
+	defer conn.Close()
+	c := pb.NewVirtualmachinesClient(conn)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	r, err := c.Update(ctx, &pb.UpdateRequest{Api: apiv, Hostname: args[0], Project: args[1], Role: args[2]})
+
+	if err != nil {
+		log.Fatalf("Could not list vms: %v", err)
+	}
+	log.Print("Updated: ", args[0], r.Success)
+}
+
+// VMCreateCommandFunc r
+func VMCreateCommandFunc(cmd *cobra.Command, args []string) {
+	conn, err := grpc.Dial(host+port, grpc.WithInsecure())
+	defer conn.Close()
+	c := pb.NewVirtualmachinesClient(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	r, err := c.Create(ctx, &pb.CreateRequest{Api: apiv, Hostname: args[0], Project: args[1], Role: args[2]})
+	if err != nil {
+		log.Fatalf("Could not create vm: %v", err)
+	}
+	log.Print("Created VM: ", r.Success)
+}
+
+// VMGetCommandFunc r
+func VMGetCommandFunc(cmd *cobra.Command, args []string) {
+	conn, err := grpc.Dial(host+port, grpc.WithInsecure())
+	defer conn.Close()
+	c := pb.NewVirtualmachinesClient(conn)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	r, err := c.Get(ctx, &pb.GetRequest{Api: apiv, Hostname: args[0]})
+
+	if err != nil {
+		log.Fatalf("Could not list vms: %v", err)
+	}
+	log.Print("Found stuff: ", r.Vm.Hostname, r.Vm.Project, r.Vm.Role)
+}
+
+// VMListCommandFunc r
+func VMListCommandFunc(cmd *cobra.Command, args []string) {
+	if project != "" {
+		log.Print("Found project: ", project)
+	}
+
+	if role != "" {
+		log.Print("Found role: ", role)
+	}
+	conn, err := grpc.Dial(host+port, grpc.WithInsecure())
+	defer conn.Close()
+	c := pb.NewVirtualmachinesClient(conn)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	var r *pb.ListResponse
+	var errmsg error
+	if project != "" && role != "" {
+		r, errmsg = c.List(ctx, &pb.ListRequest{Api: apiv, Role: role, Project: project})
+	} else if project != "" && role == "" {
+		r, errmsg = c.List(ctx, &pb.ListRequest{Api: apiv, Project: project})
+	} else if project == "" && role != "" {
+		r, errmsg = c.List(ctx, &pb.ListRequest{Api: apiv, Role: role})
+	} else {
+		log.Fatalf("Requires --project or --role")
+	}
+
+	if err != nil {
+		log.Fatalf("Could not list vms: %v", errmsg)
+	}
+
+	for x := range r.Vms {
+		log.Printf("Hostname: %s Project: %s Role: %s", r.Vms[x].Hostname, r.Vms[x].Project, r.Vms[x].Role)
+	}
+}
+
+// VMCreateCommand r
+func VMCreateCommand() *cobra.Command {
+	vmcommand := &cobra.Command{
+		Use:   "create <hostname> <project> <role>",
+		Short: "Creates new vm",
+		Args: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 3 {
+				return errors.New("create requires <hostname> <project> <role>")
+			}
+			return nil
+		},
+		Run: VMCreateCommandFunc,
+	}
+	return vmcommand
+}
+
+// VMListCommand r
+func VMListCommand() *cobra.Command {
+	vmcommand := &cobra.Command{
+		Use:   "list <project/role>",
+		Short: "Lists vms related to projects roles",
+		Run:   VMListCommandFunc,
+	}
+
+	vmcommand.Flags().StringVar(&project, "project", "", "project name")
+	vmcommand.Flags().StringVar(&role, "role", "", "role name")
+	return vmcommand
+}
+
+// VMGetCommand r
+func VMGetCommand() *cobra.Command {
+	vmcommand := &cobra.Command{
+		Use:   "get <hostname>",
+		Short: "Get vm for hostname",
+		Run:   VMGetCommandFunc,
+		Args: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 1 {
+				return errors.New("get requires <hostname>")
+			}
+			return nil
+		},
+	}
+	return vmcommand
+}
+
+// VMUpdateCommand r
+func VMUpdateCommand() *cobra.Command {
+	vmcommand := &cobra.Command{
+		Use:   "update <hostname> <project> <role>",
+		Short: "Update vm",
+		Args: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 3 {
+				return errors.New("update requires <hostname> <project> <role>")
+			}
+			return nil
+		},
+		Run: VMUpdateCommandFunc,
+	}
+	return vmcommand
+}
+
+// VMDeleteCommand r
+func VMDeleteCommand() *cobra.Command {
+	vmcommand := &cobra.Command{
+		Use:   "delete <hostname>",
+		Short: "Deletes a vm",
+		Args:  cobra.ExactArgs(1),
+		Run:   VMDeleteCommandFunc,
+	}
+	return vmcommand
+}
+
+// VMCommand r
+func VMCommand() *cobra.Command {
+	vmcmd := &cobra.Command{
+		Use:   "vm <subcommand>",
+		Short: "vm related commands",
+	}
+
+	vmcmd.AddCommand(VMCreateCommand())
+	vmcmd.AddCommand(VMListCommand())
+	vmcmd.AddCommand(VMGetCommand())
+	vmcmd.AddCommand(VMUpdateCommand())
+	vmcmd.AddCommand(VMDeleteCommand())
+	return vmcmd
+}
+
+func init() {
+	rootCmd.AddCommand(VMCommand())
+}
