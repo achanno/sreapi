@@ -3,12 +3,13 @@ package main
 import (
 	"context"
 	"database/sql"
-	_ "github.com/go-sql-driver/mysql"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
 	"log"
 	"net"
 	pb "sreapi/protobuf"
+
+	_ "github.com/go-sql-driver/mysql"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 const (
@@ -31,7 +32,7 @@ func initDBConnection() {
 	var err error
 	db, err = sql.Open("mysql", dbuser+":"+dbpass+"@tcp("+dbhost+")/sreapi")
 	if err != nil {
-		log.Fatalf("Error opening db", dbhost)
+		log.Fatalf("Error opening db %v", dbhost)
 	}
 }
 
@@ -59,13 +60,13 @@ func (s *Server) List(ctx context.Context, in *pb.ListRequest) (*pb.ListResponse
 		newvm := new(pb.Virtualmachine)
 		err = rows.Scan(&newvm.Hostname, &newvm.Project, &newvm.Role)
 		if err != nil {
-			log.Printf("Error scanning row: ", err)
+			log.Printf("Error scanning row: %v", err)
 		}
 		vms = append(vms, newvm)
 	}
 	rows.Close()
 
-	log.Printf("Addr of vms: %p len: %d data: ", vms, len(vms), &vms)
+	log.Printf("Addr of vms: %p len: %d data: %v", vms, len(vms), &vms)
 	return &pb.ListResponse{Api: apiv, Vms: vms}, nil
 	/*	var query, param1 string
 		if in.Project == "" && in.Role != "" {
@@ -102,14 +103,14 @@ func (s *Server) Get(ctx context.Context, in *pb.GetRequest) (*pb.GetResponse, e
 	rows, err := db.Query("SELECT Hostname, Project, Role  FROM vm WHERE Hostname LIKE ?", in.Hostname)
 	defer rows.Close()
 	if err != nil {
-		log.Printf("Error selcting from db: ", err)
+		log.Printf("Error selcting from db: %v", err)
 	}
 	rows.Next()
 	err = rows.Scan(&vm.Hostname, &vm.Project, &vm.Role)
 	if err != nil {
 		log.Println("Error scanning row: ", err)
 	}
-	log.Printf("Found VM: ", (*vm).Hostname, (*vm).Project, (*vm).Role)
+	log.Printf("Found VM: hostname: %s project: %s role: %s", (*vm).Hostname, (*vm).Project, (*vm).Role)
 	rows.Close()
 	return &pb.GetResponse{Api: apiv, Vm: vm}, nil
 }
