@@ -16,8 +16,12 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 	"os"
 
+	"crypto/tls"
+	"crypto/x509"
+	"github.com/achanno/sreapi/certs"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -29,7 +33,11 @@ const (
 	apiv = "1"
 )
 
-var cfgFile string
+var (
+	cfgFile      string
+	demoKeyPair  *tls.Certificate
+	demoCertPool *x509.CertPool
+)
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -66,6 +74,19 @@ func init() {
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+
+	// Initialize certs
+	pair, err := tls.X509KeyPair([]byte(certs.Cert), []byte(certs.Key))
+	if err != nil {
+		log.Fatalf("Error setting up tls: %v", err)
+	}
+
+	demoKeyPair = &pair
+	demoCertPool = x509.NewCertPool()
+	ok := demoCertPool.AppendCertsFromPEM([]byte(certs.Cert))
+	if !ok {
+		log.Fatalf("Bad cert")
+	}
 }
 
 // initConfig reads in config file and ENV variables if set.

@@ -2,19 +2,29 @@ package virtualmachineserver
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"database/sql"
+	"github.com/achanno/sreapi/certs"
 	pb "github.com/achanno/sreapi/protobuf"
 	"log"
 	"net"
 
+	// Needed
+	"flag"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+	netcontext "golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/reflection"
+	"net/http"
+	"strings"
 )
 
 const (
 	port = ":5555"
-	apiv = "1"
+	apiv = "v1"
 
 	dbhost = "127.0.0.1:3306"
 	dbuser = "sreapi"
@@ -25,7 +35,10 @@ const (
 type Server struct{}
 
 var (
-	db *sql.DB
+	vmEndpoint   = flag.String("vm_endpoint", "localhost:5555", "vm service endpoint")
+	db           *sql.DB
+	demoKeyPair  *tls.Certificate
+	demoCertPool *x509.CertPool
 )
 
 func initDBConnection() {
@@ -67,7 +80,7 @@ func (s *Server) List(ctx context.Context, in *pb.ListRequest) (*pb.ListResponse
 	rows.Close()
 
 	log.Printf("Addr of vms: %p len: %d data: %v", vms, len(vms), &vms)
-	return &pb.ListResponse{Api: apiv, Vms: vms}, nil
+	return &pb.ListResponse{XApi: apiv, Vms: vms}, nil
 	/*	var query, param1 string
 		if in.Project == "" && in.Role != "" {
 			query = "SELECT * FROM vm WHERE Role LIKE ?"
@@ -93,7 +106,7 @@ func (s *Server) List(ctx context.Context, in *pb.ListRequest) (*pb.ListResponse
 			}
 			vms = append(vms, vm)
 		}
-		return &pb.ListResponse{Api: apiv, Vms: vms}, nil*/
+		return &pb.ListResponse{XApi: apiv, Vms: vms}, nil*/
 }
 
 // Get vm
@@ -112,7 +125,7 @@ func (s *Server) Get(ctx context.Context, in *pb.GetRequest) (*pb.GetResponse, e
 	}
 	log.Printf("Found VM: hostname: %s project: %s role: %s", (*vm).Hostname, (*vm).Project, (*vm).Role)
 	rows.Close()
-	return &pb.GetResponse{Api: apiv, Vm: vm}, nil
+	return &pb.GetResponse{XApi: apiv, Vm: vm}, nil
 }
 
 // Create vm
@@ -123,10 +136,10 @@ func (s *Server) Create(ctx context.Context, in *pb.CreateRequest) (*pb.CreateRe
 	rows, err := db.Query(query, in.Hostname, in.Project, in.Role)
 
 	if err != nil {
-		return &pb.CreateResponse{Api: apiv, Success: false}, err
+		return &pb.CreateResponse{XApi: apiv, Success: false}, err
 	}
 	rows.Close()
-	return &pb.CreateResponse{Api: apiv, Success: true}, nil
+	return &pb.CreateResponse{XApi: apiv, Success: true}, nil
 }
 
 // Update vm
@@ -138,9 +151,9 @@ func (s *Server) Update(ctx context.Context, in *pb.UpdateRequest) (*pb.UpdateRe
 	defer rows.Close()
 	if err != nil {
 		log.Println("Failed updating row: ", err)
-		return &pb.UpdateResponse{Api: apiv, Success: false}, err
+		return &pb.UpdateResponse{XApi: apiv, Success: false}, err
 	}
-	return &pb.UpdateResponse{Api: apiv, Success: true}, nil
+	return &pb.UpdateResponse{XApi: apiv, Success: true}, nil
 }
 
 // Delete vm
@@ -151,24 +164,74 @@ func (s *Server) Delete(ctx context.Context, in *pb.DeleteRequest) (*pb.DeleteRe
 	defer rows.Close()
 	if err != nil {
 		log.Println("Failed to delete row: ", err)
-		return &pb.DeleteResponse{Api: apiv, Success: true}, err
+		return &pb.DeleteResponse{XApi: apiv, Success: true}, err
 	}
-	return &pb.DeleteResponse{Api: apiv, Success: true}, nil
+	return &pb.DeleteResponse{XApi: apiv, Success: true}, nil
+}
+
+func grpcHandler(grpcServer *grpc.Server, otherHandler http.Handler) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.ProtoMajor == 2 && strings.Contains(r.Header.Get("Content-Type"), "application/grpc") {
+			grpcServer.ServeHTTP(w, r)
+		} else {
+			otherHandler.ServeHTTP(w, r)
+		}
+	})
 }
 
 // Serve starts grpc server
-func Serve(port string) {
+func Serve(port string) error {
 	initDBConnection()
 	defer db.Close()
-	lis, err := net.Listen("tcp", port)
 
+	pair, err := tls.X509KeyPair([]byte(certs.Cert), []byte(certs.Key))
+
+	if err != nil {
+		log.Fatalf("Error setting up TLS: %v", err)
+	}
+
+	demoKeyPair = &pair
+	demoCertPool = x509.NewCertPool()
+	ok := demoCertPool.AppendCertsFromPEM([]byte(certs.Cert))
+	if !ok {
+		log.Fatalf("Error appending certs")
+	}
+
+	opts := []grpc.ServerOption{grpc.Creds(credentials.NewClientTLSFromCert(demoCertPool, "localhost:5555"))}
+	dcreds := credentials.NewTLS(&tls.Config{
+		ServerName: "localhost:5555",
+		RootCAs:    demoCertPool,
+	})
+	dopts := []grpc.DialOption{grpc.WithTransportCredentials(dcreds)}
+
+	netctx := netcontext.Background()
+	netctx, cancel := netcontext.WithCancel(netctx)
+	defer cancel()
+
+	mux := runtime.NewServeMux()
+	err2 := pb.RegisterVirtualmachinesHandlerFromEndpoint(netctx, mux, *vmEndpoint, dopts)
+	if err2 != nil {
+		log.Fatalf("Error registering endpoint handler: %v", err)
+	}
+
+	s := grpc.NewServer(opts...)
+	pb.RegisterVirtualmachinesServer(s, &Server{})
+	reflection.Register(s)
+
+	srv := &http.Server{
+		Addr:    port,
+		Handler: grpcHandler(s, mux),
+		TLSConfig: &tls.Config{
+			Certificates:       []tls.Certificate{*demoKeyPair},
+			NextProtos:         []string{"h2"},
+			InsecureSkipVerify: true,
+		},
+	}
+
+	lis, err := net.Listen("tcp", port)
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
-	s := grpc.NewServer()
-	pb.RegisterVirtualmachinesServer(s, &Server{})
-	reflection.Register(s)
-	if err := s.Serve(lis); err != nil {
-		log.Fatalf("Failed to serve: %v", err)
-	}
+
+	return srv.Serve(tls.NewListener(lis, srv.TLSConfig))
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"log"
 	"time"
 )
@@ -23,7 +24,7 @@ func VMDeleteCommandFunc(cmd *cobra.Command, args []string) {
 	c := pb.NewVirtualmachinesClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	r, err := c.Delete(ctx, &pb.DeleteRequest{Api: apiv, Hostname: args[0]})
+	r, err := c.Delete(ctx, &pb.DeleteRequest{XApi: apiv, Hostname: args[0]})
 	if err != nil {
 		log.Fatalf("Could not delete vm: %v", err)
 	}
@@ -37,7 +38,7 @@ func VMUpdateCommandFunc(cmd *cobra.Command, args []string) {
 	c := pb.NewVirtualmachinesClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	r, err := c.Update(ctx, &pb.UpdateRequest{Api: apiv, Hostname: args[0], Project: args[1], Role: args[2]})
+	r, err := c.Update(ctx, &pb.UpdateRequest{XApi: apiv, Hostname: args[0], Project: args[1], Role: args[2]})
 
 	if err != nil {
 		log.Fatalf("Could not list vms: %v", err)
@@ -54,7 +55,7 @@ func VMCreateCommandFunc(cmd *cobra.Command, args []string) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	r, err := c.Create(ctx, &pb.CreateRequest{Api: apiv, Hostname: args[0], Project: args[1], Role: args[2]})
+	r, err := c.Create(ctx, &pb.CreateRequest{XApi: apiv, Hostname: args[0], Project: args[1], Role: args[2]})
 	if err != nil {
 		log.Fatalf("Could not create vm: %v", err)
 	}
@@ -63,12 +64,13 @@ func VMCreateCommandFunc(cmd *cobra.Command, args []string) {
 
 // VMGetCommandFunc r
 func VMGetCommandFunc(cmd *cobra.Command, args []string) {
-	conn, err := grpc.Dial(host+port, grpc.WithInsecure())
+	creds := credentials.NewClientTLSFromCert(demoCertPool, host+port)
+	conn, err := grpc.Dial(host+port, grpc.WithTransportCredentials(creds))
 	defer conn.Close()
 	c := pb.NewVirtualmachinesClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	r, err := c.Get(ctx, &pb.GetRequest{Api: apiv, Hostname: args[0]})
+	r, err := c.Get(ctx, &pb.GetRequest{XApi: apiv, Hostname: args[0]})
 
 	if err != nil {
 		log.Fatalf("Could not list vms: %v", err)
@@ -94,11 +96,11 @@ func VMListCommandFunc(cmd *cobra.Command, args []string) {
 	var r *pb.ListResponse
 	var errmsg error
 	if project != "" && role != "" {
-		r, errmsg = c.List(ctx, &pb.ListRequest{Api: apiv, Role: role, Project: project})
+		r, errmsg = c.List(ctx, &pb.ListRequest{XApi: apiv, Role: role, Project: project})
 	} else if project != "" && role == "" {
-		r, errmsg = c.List(ctx, &pb.ListRequest{Api: apiv, Project: project})
+		r, errmsg = c.List(ctx, &pb.ListRequest{XApi: apiv, Project: project})
 	} else if project == "" && role != "" {
-		r, errmsg = c.List(ctx, &pb.ListRequest{Api: apiv, Role: role})
+		r, errmsg = c.List(ctx, &pb.ListRequest{XApi: apiv, Role: role})
 	} else {
 		log.Fatalf("Requires --project or --role")
 	}
