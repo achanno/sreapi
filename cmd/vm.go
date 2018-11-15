@@ -2,11 +2,12 @@ package cmd
 
 import (
 	"errors"
+	pb "github.com/achanno/sreapi/protobuf"
+	vmserver "github.com/achanno/sreapi/virtualmachineserver"
 	"github.com/spf13/cobra"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"log"
-	pb "sreapi/protobuf"
 	"time"
 )
 
@@ -111,6 +112,15 @@ func VMListCommandFunc(cmd *cobra.Command, args []string) {
 	}
 }
 
+// VMServerCommandFunc r
+func VMServerCommandFunc(cmd *cobra.Command, args []string) {
+	if len(args) > 0 {
+		vmserver.Serve(":" + args[0])
+	} else {
+		vmserver.Serve(":5555")
+	}
+}
+
 // VMCreateCommand r
 func VMCreateCommand() *cobra.Command {
 	vmcommand := &cobra.Command{
@@ -183,6 +193,17 @@ func VMDeleteCommand() *cobra.Command {
 	return vmcommand
 }
 
+// VMServerCommand r
+func VMServerCommand() *cobra.Command {
+	vmcommand := &cobra.Command{
+		Use:   "server <port>",
+		Short: "Start server on <port>",
+		Args:  cobra.MaximumNArgs(1),
+		Run:   VMServerCommandFunc,
+	}
+	return vmcommand
+}
+
 // VMCommand r
 func VMCommand() *cobra.Command {
 	vmcmd := &cobra.Command{
@@ -195,6 +216,7 @@ func VMCommand() *cobra.Command {
 	vmcmd.AddCommand(VMGetCommand())
 	vmcmd.AddCommand(VMUpdateCommand())
 	vmcmd.AddCommand(VMDeleteCommand())
+	vmcmd.AddCommand(VMServerCommand())
 	return vmcmd
 }
 

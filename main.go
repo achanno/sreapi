@@ -14,7 +14,7 @@
 
 package main
 
-import "sreapi/cmd"
+import "github.com/achanno/sreapi/cmd"
 
 func main() {
 	cmd.Execute()

@@ -1,11 +1,11 @@
-package main
+package virtualmachineserver
 
 import (
 	"context"
 	"database/sql"
+	pb "github.com/achanno/sreapi/protobuf"
 	"log"
 	"net"
-	pb "sreapi/protobuf"
 
 	_ "github.com/go-sql-driver/mysql"
 	"google.golang.org/grpc"
@@ -156,7 +156,8 @@ func (s *Server) Delete(ctx context.Context, in *pb.DeleteRequest) (*pb.DeleteRe
 	return &pb.DeleteResponse{Api: apiv, Success: true}, nil
 }
 
-func main() {
+// Serve starts grpc server
+func Serve(port string) {
 	initDBConnection()
 	defer db.Close()
 	lis, err := net.Listen("tcp", port)
