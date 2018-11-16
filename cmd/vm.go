@@ -5,11 +5,7 @@ import (
 	pb "github.com/achanno/sreapi/protobuf"
 	vmserver "github.com/achanno/sreapi/virtualmachineserver"
 	"github.com/spf13/cobra"
-	"golang.org/x/net/context"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 	"log"
-	"time"
 )
 
 var (
@@ -19,11 +15,6 @@ var (
 
 // VMDeleteCommandFunc r
 func VMDeleteCommandFunc(cmd *cobra.Command, args []string) {
-	conn, err := grpc.Dial(host+port, grpc.WithInsecure())
-	defer conn.Close()
-	c := pb.NewVirtualmachinesClient(conn)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
 	r, err := c.Delete(ctx, &pb.DeleteRequest{XApi: apiv, Hostname: args[0]})
 	if err != nil {
 		log.Fatalf("Could not delete vm: %v", err)
@@ -33,13 +24,7 @@ func VMDeleteCommandFunc(cmd *cobra.Command, args []string) {
 
 // VMUpdateCommandFunc r
 func VMUpdateCommandFunc(cmd *cobra.Command, args []string) {
-	conn, err := grpc.Dial(host+port, grpc.WithInsecure())
-	defer conn.Close()
-	c := pb.NewVirtualmachinesClient(conn)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
 	r, err := c.Update(ctx, &pb.UpdateRequest{XApi: apiv, Hostname: args[0], Project: args[1], Role: args[2]})
-
 	if err != nil {
 		log.Fatalf("Could not list vms: %v", err)
 	}
@@ -48,13 +33,6 @@ func VMUpdateCommandFunc(cmd *cobra.Command, args []string) {
 
 // VMCreateCommandFunc r
 func VMCreateCommandFunc(cmd *cobra.Command, args []string) {
-	conn, err := grpc.Dial(host+port, grpc.WithInsecure())
-	defer conn.Close()
-	c := pb.NewVirtualmachinesClient(conn)
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-
 	r, err := c.Create(ctx, &pb.CreateRequest{XApi: apiv, Hostname: args[0], Project: args[1], Role: args[2]})
 	if err != nil {
 		log.Fatalf("Could not create vm: %v", err)
@@ -64,14 +42,7 @@ func VMCreateCommandFunc(cmd *cobra.Command, args []string) {
 
 // VMGetCommandFunc r
 func VMGetCommandFunc(cmd *cobra.Command, args []string) {
-	creds := credentials.NewClientTLSFromCert(demoCertPool, host+port)
-	conn, err := grpc.Dial(host+port, grpc.WithTransportCredentials(creds))
-	defer conn.Close()
-	c := pb.NewVirtualmachinesClient(conn)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
 	r, err := c.Get(ctx, &pb.GetRequest{XApi: apiv, Hostname: args[0]})
-
 	if err != nil {
 		log.Fatalf("Could not list vms: %v", err)
 	}
@@ -87,12 +58,6 @@ func VMListCommandFunc(cmd *cobra.Command, args []string) {
 	if role != "" {
 		log.Print("Found role: ", role)
 	}
-	conn, err := grpc.Dial(host+port, grpc.WithInsecure())
-	defer conn.Close()
-	c := pb.NewVirtualmachinesClient(conn)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-
 	var r *pb.ListResponse
 	var errmsg error
 	if project != "" && role != "" {
@@ -105,7 +70,7 @@ func VMListCommandFunc(cmd *cobra.Command, args []string) {
 		log.Fatalf("Requires --project or --role")
 	}
 
-	if err != nil {
+	if errmsg != nil {
 		log.Fatalf("Could not list vms: %v", errmsg)
 	}
 
@@ -171,11 +136,11 @@ func VMGetCommand() *cobra.Command {
 // VMUpdateCommand r
 func VMUpdateCommand() *cobra.Command {
 	vmcommand := &cobra.Command{
-		Use:   "update <hostname> <project> <role>",
+		Use:   "update <oldhostname> <hostname> <project> <role>",
 		Short: "Update vm",
 		Args: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 3 {
-				return errors.New("update requires <hostname> <project> <role>")
+			if len(args) != 4 {
+				return errors.New("update requires <oldhostname> <hostname> <project> <role>")
 			}
 			return nil
 		},

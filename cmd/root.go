@@ -22,9 +22,14 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"github.com/achanno/sreapi/certs"
+	pb "github.com/achanno/sreapi/protobuf"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"time"
 )
 
 const (
@@ -37,6 +42,10 @@ var (
 	cfgFile      string
 	demoKeyPair  *tls.Certificate
 	demoCertPool *x509.CertPool
+	conn         *grpc.ClientConn
+	c            pb.VirtualmachinesClient
+	ctx          context.Context
+	cancel       context.CancelFunc
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -61,6 +70,9 @@ func Execute() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+
+	defer conn.Close()
+	defer cancel()
 }
 
 func init() {
@@ -87,6 +99,19 @@ func init() {
 	if !ok {
 		log.Fatalf("Bad cert")
 	}
+
+	// Initialize grpc connection
+	creds := credentials.NewClientTLSFromCert(demoCertPool, host+port)
+	conntmp, err := grpc.Dial(host+port, grpc.WithTransportCredentials(creds))
+	if err != nil {
+		log.Fatalf("Error connecting to grpc: %v", err)
+	}
+	conn = conntmp
+
+	// Initialize context
+	c = pb.NewVirtualmachinesClient(conn)
+	ctx, cancel = context.WithTimeout(context.Background(), time.Second)
+
 }
 
 // initConfig reads in config file and ENV variables if set.
