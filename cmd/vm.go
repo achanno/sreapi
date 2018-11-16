@@ -24,7 +24,7 @@ func VMDeleteCommandFunc(cmd *cobra.Command, args []string) {
 
 // VMUpdateCommandFunc r
 func VMUpdateCommandFunc(cmd *cobra.Command, args []string) {
-	r, err := c.Update(ctx, &pb.UpdateRequest{XApi: apiv, Hostname: args[0], Project: args[1], Role: args[2]})
+	r, err := c.Update(ctx, &pb.UpdateRequest{XApi: apiv, Hostname: args[1], Project: args[2], Role: args[3], Oldhostname: args[0]})
 	if err != nil {
 		log.Fatalf("Could not list vms: %v", err)
 	}

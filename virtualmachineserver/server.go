@@ -147,7 +147,7 @@ func (s *Server) Update(ctx context.Context, in *pb.UpdateRequest) (*pb.UpdateRe
 	log.Println("Updating vm... hostname: " + in.Hostname + " project: " + in.Project + " role: " + in.Role)
 
 	query := "UPDATE vm SET Hostname=?, Project=?, Role=? WHERE Hostname like ?"
-	rows, err := db.Query(query, in.Newhostname, in.Project, in.Role, in.Hostname)
+	rows, err := db.Query(query, in.Hostname, in.Project, in.Role, in.Oldhostname)
 	defer rows.Close()
 	if err != nil {
 		log.Println("Failed updating row: ", err)
