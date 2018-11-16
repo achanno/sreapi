@@ -50,7 +50,7 @@ message UpdateRequest {
   string hostname = 2;
   string project = 3;
   string role = 4;
-  string newhostname = 5;
+  string oldhostname = 5;
 
 }
 
