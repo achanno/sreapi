@@ -4,97 +4,108 @@ import "google/api/annotations.proto";
 
 package sreapi;
 
+/*
+message Project {
+  string _api = 1;
+  string name = 2;
+  repeated Stack stacks = 3;
+}
+
+message Stack {
+  string _api = 1;
+  repeated Role roles = 2;
+}
+
+message Role {
+  string _api = 1;
+  string name = 2;
+  Role parent = 3;
+}
+*/
 message Virtualmachine {
   string _api = 1;
   string hostname = 2;
-  string project = 3;
-  string role = 4;
+  Role role = 3;
 }
 
 
-message ListRequest{
+message ListVMRequest{
   string _api = 1;
-  string project = 2;
-  string role = 3;
+  Virtualmachine filter = 2;
 }
 
-message ListResponse {
+message ListVMResponse {
   string _api = 1;
   repeated Virtualmachine vms = 2;
 }
 
-message GetRequest {
+message GetVMRequest {
   string _api = 1;
-  string hostname = 2;
+  Virtualmachine filter = 2;
 }
 
-message GetResponse {
+message GetVMResponse {
   string _api = 1;
   Virtualmachine vm = 2;
 }
 
-message CreateRequest {
+message CreateVMRequest {
   string _api = 1;
-  string hostname = 2;
-  string project = 3;
-  string role = 4;
+  Virtualmachine vm = 2;
 }
 
-message CreateResponse {
+message CreateVMResponse {
   string _api = 1;
   bool success = 2;
 }
 
-message UpdateRequest {
+message UpdateVMRequest {
   string _api = 1;
-  string hostname = 2;
-  string project = 3;
-  string role = 4;
-  string oldhostname = 5;
-
+  Virtualmachine oldvm = 2;
+  Virtualmachine newvm = 3;
 }
 
-message UpdateResponse {
+message UpdateVMResponse {
   string _api = 1;
   bool success = 2;
 }
 
-message DeleteRequest {
+message DeleteVMRequest {
   string _api = 1;
-  string hostname = 2;
+  Virtualmachine target = 2;
 }
 
-message DeleteResponse {
+message DeleteVMResponse {
   string _api = 1;
   bool success = 2;
 }
 
 service Virtualmachines {
-  rpc List (ListRequest) returns (ListResponse) {
+  rpc List (ListVMRequest) returns (ListVMResponse) {
     option (google.api.http) = {
-      get: "/v1/vm/{project}/{role}",
+      get: "/v1/vm/{Virtualmachine}",
     };
   }
-  rpc Get (GetRequest) returns (GetResponse) {
+  rpc Get (GetVMRequest) returns (GetVMResponse) {
     option (google.api.http) = {
-      get: "/v1/vm/*/*/{hostname}",
+      get: "/v1/vm/{Virtualmachine}",
     };
   }
-  rpc Create (CreateRequest) returns (CreateResponse) {
+  rpc Create (CreateVMRequest) returns (CreateVMResponse) {
     option (google.api.http) = {
-      post: "/v1/vm/{project}/{role}/{hostname}",
+      post: "/v1/vm/{Virtualmachine}",
       body: "*"
     };
   }
-  rpc Update (UpdateRequest) returns (UpdateResponse) {
+  rpc Update (UpdateVMRequest) returns (UpdateVMResponse) {
     option (google.api.http) = {
-      patch: "/v1/vm/{project}/{role}/{hostname}",
-      body: "*"
+      patch: "/v1/vm/{Virtualmachine}",
+      body: "Virtualmachine"
     };
   }
-  rpc Delete (DeleteRequest) returns (DeleteResponse) {
+  rpc Delete (DeleteVMRequest) returns (DeleteVMResponse) {
     option (google.api.http) = {
-      delete: "/v1/vm/*/*/{hostname}"
+      delete: "/v1/vm/{Virtualmachine}"
     };
   }
 }

@@ -5,21 +5,23 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"database/sql"
-	"github.com/achanno/sreapi/certs"
-	pb "github.com/achanno/sreapi/protobuf"
 	"log"
 	"net"
 
+	"github.com/achanno/sreapi/certs"
+	pb "github.com/achanno/sreapi/protobuf"
+
 	// Needed
 	"flag"
+	"net/http"
+	"strings"
+
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	netcontext "golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/reflection"
-	"net/http"
-	"strings"
 )
 
 const (
@@ -33,6 +35,22 @@ const (
 
 // Server t
 type Server struct{}
+
+type Virtualmachine struct {
+	Hostname string
+	Project  string
+	Role     string
+}
+
+type VirtualmachineInterface interface {
+	VirtualmachineFromProto() Virtualmachine
+	VirtualmachineFromSQL() Virtualmachine
+	VirtualmachineToProto(x Virtualmachine) pb.Virtualmachine
+}
+
+func VirtualmachineFromProto() Virtualmachine {
+
+}
 
 var (
 	vmEndpoint   = flag.String("vm_endpoint", "localhost:5555", "vm service endpoint")
@@ -81,32 +99,6 @@ func (s *Server) List(ctx context.Context, in *pb.ListRequest) (*pb.ListResponse
 
 	log.Printf("Addr of vms: %p len: %d data: %v", vms, len(vms), &vms)
 	return &pb.ListResponse{XApi: apiv, Vms: vms}, nil
-	/*	var query, param1 string
-		if in.Project == "" && in.Role != "" {
-			query = "SELECT * FROM vm WHERE Role LIKE ?"
-			param1 = in.Role
-		} else if in.Project != "" && in.Role == "" {
-			query = "SELECT * FROM vm WHERE Project LIKE ?"
-			param1 = in.Project
-		} else if in.Project != "" && in.Role != "" {
-			query = "SELECT * FROM vm WHERE Project LIKE ? AND Role LIKE ?"
-			param1 = in.Project
-		}
-
-		rows, err := db.Query(query, param1)
-		if err != nil {
-			log.Printf("Error running query %v", err)
-		}
-		vms := make([]*pb.Virtualmachine, 0)
-		for rows.Next() {
-			vm := new(pb.Virtualmachine)
-			err = rows.Scan(&vm.Hostname, &vm.Project, &vm.Role)
-			if err != nil {
-				log.Printf("Error scanning row: %v", err)
-			}
-			vms = append(vms, vm)
-		}
-		return &pb.ListResponse{XApi: apiv, Vms: vms}, nil*/
 }
 
 // Get vm
