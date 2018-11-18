@@ -16,8 +16,9 @@ import (
 	"net/http"
 	"strings"
 
-	_ "github.com/go-sql-driver/mysql"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	netcontext "golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -33,31 +34,39 @@ const (
 	dbpass = "tmp123"
 )
 
-// Server t
-type Server struct{}
-
-type Virtualmachine struct {
-	Hostname string
-	Project  string
-	Role     string
-}
-
-type VirtualmachineInterface interface {
-	VirtualmachineFromProto() Virtualmachine
-	VirtualmachineFromSQL() Virtualmachine
-	VirtualmachineToProto(x Virtualmachine) pb.Virtualmachine
-}
-
-func VirtualmachineFromProto() Virtualmachine {
-
-}
-
 var (
 	vmEndpoint   = flag.String("vm_endpoint", "localhost:5555", "vm service endpoint")
-	db           *sql.DB
+	db           *gorm.DB
 	demoKeyPair  *tls.Certificate
 	demoCertPool *x509.CertPool
 )
+
+type Project_db struct {
+	gorm.Model
+	Name string
+}
+
+type Stack_db struct {
+	gorm.Model
+	Project string
+	Name    string
+}
+
+type Role_db struct {
+	gorm.Model
+	Project    string
+	Stack      string
+	Name       string
+	ParentRole string
+}
+
+type Virtualmachine_db struct {
+	gorm.Model
+	Project  string
+	Stack    string
+	Role     string
+	Hostname string
+}
 
 func initDBConnection() {
 	var err error
@@ -67,8 +76,35 @@ func initDBConnection() {
 	}
 }
 
+// ProjectServer t
+type ProjectServer struct{}
+
+// StackServer t
+type StackServer struct{}
+
+// RoleServer t
+type RoleServer struct{}
+
+// VMServer t
+type VMServer struct{}
+
+// List Projects
+func (s *ProjectServer) List(ctx context.Context, in *pb.ListProjectRequest) (*pb.ListProjectResponse, error) {
+	return nil, nil
+}
+
+// List Stacks
+func (s *StackServer) List(ctx context.Context, in *pb.ListStackRequest) (*pb.ListStackResponse, error) {
+	return nil, nil
+}
+
+// List Roles
+func (s *RoleServer) List(ctx context.Context, in *pb.ListRoleRequest) (*pb.ListRoleResponse, error) {
+	return nil, nil
+}
+
 // List vms
-func (s *Server) List(ctx context.Context, in *pb.ListRequest) (*pb.ListResponse, error) {
+func (s *VMServer) List(ctx context.Context, in *pb.ListVMRequest) (*pb.ListVMResponse, error) {
 	var err error
 	var rows *sql.Rows
 	log.Println("List called with project: " + in.Project + " role: " + in.Role)
