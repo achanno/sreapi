@@ -6,7 +6,23 @@
         {
             "label": "build virtualmachineserver",
             "type": "shell",
-            "command": "go build"
+            "command": "go build",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "build protocolbuffers",
+            "type": "shell",
+            "command": "bash gen_proto.sh",
+            "problemMatcher": []
+        },
+        {
+            "label": "check path",
+            "type": "shell",
+            "command": "echo $PATH",
+            "problemMatcher": []
         }
     ]
 }
