@@ -5,33 +5,216 @@ import "google/api/annotations.proto";
 package sreapi;
 
 /*
+API:
+
+/<apiversion>/<project>
+/<apiversion>/<project>/<stack>
+/<apiversion>/<project>/<stack>/<role>
+/<apiversion>/<project>/<stack>/<role><vm>
+*/
+
+
+// Toplevel
 message Project {
   string _api = 1;
-  string name = 2;
-  repeated Stack stacks = 3;
+  string name = 2;  
 }
 
 message Stack {
   string _api = 1;
-  repeated Role roles = 2;
+  string name = 2;
 }
 
 message Role {
   string _api = 1;
   string name = 2;
-  Role parent = 3;
+  string parentrole = 3;
 }
-*/
+
 message Virtualmachine {
   string _api = 1;
-  string hostname = 2;
-  Role role = 3;
+  string hostname = 2;  
 }
+
+
+
+// Project Messages
+message ListProjectRequest {
+  string _api = 1;
+}
+
+message ListProjectResponse {
+  string _api = 1;
+  repeated Project projects = 2;
+}
+
+message GetProjectRequest {
+  string _api = 1;
+  string project = 2;
+}
+
+message GetProjectResponse {
+  string _api = 1;
+  repeated Stack stacks = 2;  
+}
+
+message CreateProjectRequest {
+  string _api = 1;
+  string project = 2;  
+}
+message CreateProjectResponse {
+  string _api = 1;
+  bool    success = 2;
+}
+
+message UpdateProjectRequest {
+  string _api = 1;
+  string oldproject = 2;
+  string newproject = 3;
+}
+
+message UpdateProjectResponse {
+  string _api = 1;
+  bool success = 2;
+}
+
+message DeleteProjectRequest {
+  string _api = 1;
+  string project = 2;
+}
+
+message DeleteProjectResponse {
+  string _api = 1;
+  bool success = 2;
+}
+
+// Stack Messages
+message ListStackRequest {
+  string _api = 1;
+  string project = 2;
+}
+message ListStackResponse {
+  string _api = 1;
+  repeated Stack stacks = 2;
+}
+
+message GetStackRequest {
+  string _api = 1;
+  string project = 2;
+  string stack = 3;
+}
+
+message GetStackResponse {
+  string _api = 1;
+  repeated Role roles = 2;
+}
+
+message CreateStackRequest {
+  string _api = 1;
+  string stack = 2;
+  string project = 3;
+}
+
+message CreateStackResponse {
+  string _api = 1;
+  bool success = 2;
+}
+
+message UpdateStackRequest {
+  string _api = 1;
+  string oldproject = 2;
+  string newproject = 3; 
+  string oldstack = 4;
+  string newstack = 5;
+}
+
+message UpdateStackResponse {
+  string _api = 1;
+  bool success = 2;
+}
+
+message DeleteStackRequest {
+  string _api = 1;
+  string project = 2;
+  string stack = 3;
+}
+
+message DeleteStackResponse {
+  string _api = 1;
+  bool success = 2;
+}
+
+// Role Messages
+ message ListRoleRequest {
+   string _api = 1;
+   string project = 2;
+   string stack = 3;
+ }
+
+ message ListRoleResponse {
+   string _api = 1;
+   repeated Role roles = 2;
+ }
+
+ message GetRoleRequest {
+   string _api = 1; 
+   string project = 2;
+   string stack = 3;
+   string role = 4;
+ }
+
+ message GetRoleResponse {
+   string _api = 1;
+   repeated Virtualmachine vms = 2;
+ }
+
+ message CreateRoleRequest {
+   string _api = 1;
+   string project = 2;
+   string stack = 3;
+   string role = 4;
+ }
+
+ message CreateRoleResponse {
+   string _api = 1;
+   bool success = 2;
+ }
+
+ message UpdateRoleRequest {
+   string _api = 1;
+   string oldproject = 2;
+   string oldstack = 3;
+   string oldrole = 4;
+   string newproject = 5;
+   string newstack = 6;
+   string newrole = 7;
+ }
+
+ message UpdateRoleResponse {
+   string _api = 1;
+   bool success = 2;
+ }
+
+ message DeleteRoleRequest {
+   string _api = 1;
+   string project = 2;
+   string stack = 3;
+   string role = 4;
+ }
+
+ message DeleteRoleResponse {
+   string _api = 1;
+   bool success = 2;
+ }
+
+// VM Messages
 
 
 message ListVMRequest{
   string _api = 1;
-  Virtualmachine filter = 2;
+  string project = 2;
+  string role = 3;
+  string stack = 4;
 }
 
 message ListVMResponse {
@@ -41,7 +224,10 @@ message ListVMResponse {
 
 message GetVMRequest {
   string _api = 1;
-  Virtualmachine filter = 2;
+  string project = 2;
+  string stack = 3;
+  string role = 4;
+  string hostname = 5;
 }
 
 message GetVMResponse {
@@ -51,7 +237,10 @@ message GetVMResponse {
 
 message CreateVMRequest {
   string _api = 1;
-  Virtualmachine vm = 2;
+  string project = 2;
+  string stack = 3;
+  string role = 4;
+  string hostname = 5; 
 }
 
 message CreateVMResponse {
@@ -61,8 +250,14 @@ message CreateVMResponse {
 
 message UpdateVMRequest {
   string _api = 1;
-  Virtualmachine oldvm = 2;
-  Virtualmachine newvm = 3;
+  string oldproject = 2;
+  string oldstack = 3;
+  string oldrole = 4;
+  string oldhostname = 5;
+  string newproject = 6;
+  string newstack = 7;
+  string newrole = 8;
+  string newhostname = 9;
 }
 
 message UpdateVMResponse {
@@ -72,7 +267,10 @@ message UpdateVMResponse {
 
 message DeleteVMRequest {
   string _api = 1;
-  Virtualmachine target = 2;
+  string project = 2;
+  string stack = 3;
+  string role = 4;
+  string hostname = 5;
 }
 
 message DeleteVMResponse {
@@ -80,32 +278,142 @@ message DeleteVMResponse {
   bool success = 2;
 }
 
-service Virtualmachines {
+// Services
+
+// Projects service
+service ProjectService {
+  rpc List (ListProjectRequest) returns (ListProjectResponse) {
+    option (google.api.http) = {
+      get: "/v1",
+    };
+  }
+
+  rpc Get (GetProjectRequest) returns (GetProjectResponse) {
+    option (google.api.http) = {
+      get: "/v1/{project}",
+    };
+  }
+
+  rpc Create (CreateProjectRequest) returns (CreateProjectResponse) {
+    option (google.api.http) = {
+      post: "/v1/{project}",
+      body: "*",
+    };
+  }
+
+  rpc Update (UpdateProjectRequest) returns (CreateProjectResponse) {
+    option (google.api.http) = {
+      patch: "/v1/{oldproject}",
+      body: "*"
+    };
+  }
+
+  rpc Delete (DeleteProjectRequest) returns (DeleteProjectResponse) {
+    option (google.api.http) = {
+      delete: "/v1/{project}",
+    };
+  }
+}
+
+
+// Stacks service
+
+service StackService {
+  rpc List (ListStackRequest) returns (ListStackResponse) {
+    option (google.api.http) = {
+      get: "/v1/{project}",
+    };
+  }
+
+  rpc Get (GetStackRequest) returns (ListStackResponse) {
+    option (google.api.http) = {
+      get: "/v1/{project}/{stack}",
+    };
+  }
+
+  rpc Create (CreateStackRequest) returns (CreateStackResponse) {
+    option (google.api.http) = {
+      post: "/v1/{project}/{stack}",
+    };
+  }
+
+  rpc Update  (UpdateStackRequest) returns (UpdateStackResponse) {
+    option (google.api.http) = {
+      patch: "/v1/{oldproject}/{oldstack}",
+      body: "*"
+    };
+  }
+
+  rpc Delete (DeleteStackRequest) returns (DeleteStackResponse) {
+    option (google.api.http) = {
+      delete: "/v1/{project}/{stack}",
+    };
+  }  
+}
+
+// Role Service
+service RoleService {
+  rpc List (ListRoleRequest) returns (ListRoleResponse) {
+    option (google.api.http) = {
+      get: "/v1/{project}/{stack}"
+    };
+  }
+
+  rpc Get (GetRoleRequest) returns (GetRoleResponse) {
+    option (google.api.http) = {
+      get: "/v1/{project}/{stack}/{role}",
+    };
+  }
+
+  rpc Create (CreateRoleRequest) returns (CreateRoleResponse) {
+    option (google.api.http) = {
+      post: "/v1/{project}/{stack}/{role}",
+    };
+  }
+
+  rpc Update (UpdateRoleRequest) returns (UpdateProjectResponse) {
+    option (google.api.http) = {
+      patch: "/v1/{oldproject}/{oldstack}/{oldrole}",
+      body: "*",
+    };
+  }
+
+  rpc Delete (DeleteRoleRequest) returns (DeleteRoleResponse) {
+    option (google.api.http) = {
+      delete: "/v1/{project}/{stack}/{role}",    
+    };
+  }
+
+}
+
+// Virtualmachine Service
+
+service VirtualmachineService {
   rpc List (ListVMRequest) returns (ListVMResponse) {
     option (google.api.http) = {
-      get: "/v1/vm/{Virtualmachine}",
+      get: "/v1/{project}/{stack}/{role}"
     };
   }
   rpc Get (GetVMRequest) returns (GetVMResponse) {
     option (google.api.http) = {
-      get: "/v1/vm/{Virtualmachine}",
+      get: "/v1/{project}/{stack}/{role}/{hostname}",
     };
   }
   rpc Create (CreateVMRequest) returns (CreateVMResponse) {
     option (google.api.http) = {
-      post: "/v1/vm/{Virtualmachine}",
+      post: "/v1/{project}/{stack}/{role}/{hostname}",
       body: "*"
     };
   }
   rpc Update (UpdateVMRequest) returns (UpdateVMResponse) {
     option (google.api.http) = {
-      patch: "/v1/vm/{Virtualmachine}",
-      body: "Virtualmachine"
+      patch: "/v1/{oldproject}/{oldstack}/{oldrole}/{oldhostname}",
+      body: "*"
     };
   }
   rpc Delete (DeleteVMRequest) returns (DeleteVMResponse) {
     option (google.api.http) = {
-      delete: "/v1/vm/{Virtualmachine}"
+      delete: "/v1/{project}/{stack}/{role}/{hostname}",
     };
   }
 }
