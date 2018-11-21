@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"database/sql"
 	"log"
 	"net"
 
@@ -83,11 +82,11 @@ func (p *stackdb) toDB() interface{} {
 	return p
 }
 func (p *stackdb) toProto() interface{} {
-	return &pb.Stack{name: p.name}
+	return &pb.Stack{Name: p.Name}
 }
 
 func (p *stack) toDB() interface{} {
-	project = "test" // Grab from db?
+	project := "test" // Grab from db?
 	return &stackdb{Name: p.Name, Project: project}
 }
 
@@ -108,11 +107,11 @@ func (p *roledb) toDB() interface{} {
 }
 
 func (p *roledb) toProto() interface{} {
-	return &pb.Stack{name: p.Name}
+	return &pb.Stack{Name: p.Name}
 }
 
 func (p *role) toDB() interface{} {
-	return &roledb{Name: p.name, Stack: "test", Project: "test", ParentRole: "someotherrole"}
+	return &roledb{Name: p.Name, Stack: "test", Project: "test", ParentRole: "someotherrole"}
 }
 func (p *role) toProto() interface{} {
 	return p
@@ -134,7 +133,7 @@ func (p *vmdb) toProto() interface{} {
 }
 
 func (p *vm) toDB() interface{} {
-	return &vmdb{Hostname: p.Hostname, Project: "test", stack: "test", Role: "Test"}
+	return &vmdb{Hostname: p.Hostname, Project: "test", Stack: "test", Role: "Test"}
 }
 
 func (p *vm) toProto() interface{} {
@@ -143,7 +142,7 @@ func (p *vm) toProto() interface{} {
 
 func initDBConnection() {
 	var err error
-	db, err = sql.Open("mysql", dbuser+":"+dbpass+"@tcp("+dbhost+")/sreapi")
+	db, err = gorm.Open("sqlite3", "sreapi.db")
 	if err != nil {
 		log.Fatalf("Error opening db %v", dbhost)
 	}
@@ -161,61 +160,153 @@ type RoleServer struct{}
 // VMServer t
 type VMServer struct{}
 
+// List functions
+
 // List Projects
 func (s *ProjectServer) List(ctx context.Context, in *pb.ListProjectRequest) (*pb.ListProjectResponse, error) {
 	var results []projectdb
 	db.Find(&results)
 	var resultsproto []pb.Project
+
 	for x := range results {
-		resultsproto = append(resultsproto, Sreapii.toProto(results[x]))
+		var res projectdb
+		resultsproto = append(resultsproto, Sreapii(&(res.(projectdb)).toProto())
 	}
 	return &pb.ProjectListResponse{XApi: apiv, Projects: resultsproto}, nil
 }
 
 // List Stacks
 func (s *StackServer) List(ctx context.Context, in *pb.ListStackRequest) (*pb.ListStackResponse, error) {
-	return nil, nil
+	var results []stackdb
+	db.Find(&results)
+	var resultsproto []pb.Stack
+	for x := range results {
+		resultsproto = append(resultsproto, Sreapii.toProto(results[x]))
+	}
+	return nil, &pb.StackListResponse{XApi: apiv, Stacks: resultsproto}
 }
 
 // List Roles
 func (s *RoleServer) List(ctx context.Context, in *pb.ListRoleRequest) (*pb.ListRoleResponse, error) {
-	return nil, nil
+	var results []roledb
+	db.Find(&results)
+	var resultsproto []pb.Role
+	for x := range results {
+		resultsproto = append(resultsproto, Sreapii.toProto(results[x]))
+	}
+	return &pb.RoleListResponse{XApi: apiv, Roles: resultsproto}, nil
 }
 
 // List vms
 func (s *VMServer) List(ctx context.Context, in *pb.ListVMRequest) (*pb.ListVMResponse, error) {
-	var err error
-	var rows *sql.Rows
-	log.Println("List called with project: " + in.Project + " role: " + in.Role)
+	/*	var err error
+		var rows *sql.Rows
+		log.Println("List called with project: " + in.Project + " role: " + in.Role)
 
-	if in.Project == "" && in.Role != "" {
-		rows, err = db.Query("SELECT * FROM vm WHERE Role like ?", in.Role)
-	} else if in.Project != "" && in.Role == "" {
-		rows, err = db.Query("SELECT * FROM vm WHERE Project like ?", in.Project)
-	} else if in.Project != "" && in.Role != "" {
-		rows, err = db.Query("SELECT * FROM vm WHERE Project like ? AND Role like ?", in.Project, in.Role)
-	}
-
-	if err != nil {
-		log.Println("Error selecting from db: ", err)
-	}
-
-	vms := make([]*pb.Virtualmachine, 0)
-
-	for rows.Next() {
-		newvm := new(pb.Virtualmachine)
-		err = rows.Scan(&newvm.Hostname, &newvm.Project, &newvm.Role)
-		if err != nil {
-			log.Printf("Error scanning row: %v", err)
+		if in.Project == "" && in.Role != "" {
+			rows, err = db.Query("SELECT * FROM vm WHERE Role like ?", in.Role)
+		} else if in.Project != "" && in.Role == "" {
+			rows, err = db.Query("SELECT * FROM vm WHERE Project like ?", in.Project)
+		} else if in.Project != "" && in.Role != "" {
+			rows, err = db.Query("SELECT * FROM vm WHERE Project like ? AND Role like ?", in.Project, in.Role)
 		}
-		vms = append(vms, newvm)
-	}
-	rows.Close()
 
-	log.Printf("Addr of vms: %p len: %d data: %v", vms, len(vms), &vms)
-	return &pb.ListResponse{XApi: apiv, Vms: vms}, nil
+		if err != nil {
+			log.Println("Error selecting from db: ", err)
+		}
+
+		vms := make([]*pb.Virtualmachine, 0)
+
+		for rows.Next() {
+			newvm := new(pb.Virtualmachine)
+			err = rows.Scan(&newvm.Hostname, &newvm.Project, &newvm.Role)
+			if err != nil {
+				log.Printf("Error scanning row: %v", err)
+			}
+			vms = append(vms, newvm)
+		}
+		rows.Close()
+
+		log.Printf("Addr of vms: %p len: %d data: %v", vms, len(vms), &vms)*/
+	var results []vmdb
+	db.Find(&results)
+	var resultsproto []pb.Virtualmachine
+	for x := range results {
+		resultsproto = append(resultsproto, Sreapii.toProto(results[x]))
+	}
+	return &pb.ListResponse{XApi: apiv, Vms: resultsproto}, nil
 }
 
+// Get functions
+
+// Get Project
+func (s *ProjectServer) Get(ctx context.Context, in *pb.GetProjectRequest) *pb.GetProjectResponse {
+	var result projectdb
+	db.Where("name = ?", s.Name).Find(&result)
+	return &pb.GetProjectResponse{XApi: apiv, Name: result.Name}, nil
+}
+
+// Get stack
+func (s *StackServer) Get(ctx context.Context, in *pb.GetStackRequest) *pb.GetStackResponse {
+	var result stackdb
+	db.Where("name = ?", s.Name).Find(&result)
+	return &pb.GetStackResponse{XApi: apiv, Name: result.Name}, nil
+}
+
+// Get Role
+func (s *RoleServer) Get(ctx context.Context, in *pb.GetRoleRequest) *pb.GetRoleRequest {
+	var result roledb
+	db.Where("name = ?", s.Name).Find(&result)
+	return &pb.GetRoleResponse{XApi: apiv, Name: result.Name}, nil
+}
+
+// Get VM
+func (s *VMServer) Get(ctx context.Context, in *pb.GetVMRequest) *pb.GetVMResponse {
+	var result vmdb
+	db.Where("name = ?", s.Name).find(&result)
+	return &pb.GetVMResponse{XApi: apiv, Name: result.Name}, nil
+}
+
+// Create Functions
+
+// Create Project
+func (s *ProjectServer) Create(ctx context.Context, in *pb.CreateProjectRequest) *pb.CreateProjectResponse {
+	err := db.Create(Sreapii(s).toDB()).Error
+	if err != nil {
+		return &pb.CreateProjectResponse{XApi: apiv, Success: false}, err
+	}
+	return &pb.CreateProjectRequest{XApi: apiv, Success: true}, nil
+}
+
+// Create Stack
+func (s *StackServer) Create(ctx context.Context, in *pb.CreateStackRequest) *pb.CreateStackResponse {
+	err := db.Create(Sreapii(s).toDB()).Error
+	if err != nil {
+		return &pb.CreateStackResponse{XApi: apiv, Success: False}, err
+	}
+	return &pb.CreateStackResponse{XApi: apiv, Success: True}, err
+}
+
+// Create Role
+func (s *RoleServer) Create(ctx context.Context, in *pb.CreateRoleRequest) *pb.CreateRoleResponse {
+	err := db.Create(Sreapii(s).toDB()).Error
+	if err != nil {
+		return &pb.CreateRoleResponse{XApi: apiv, success: False}, err
+	}
+	return &pb.CreateRoleResponse{XApi: apiv, success: True}, nil
+}
+
+// Create VM
+func (s *VMServer) Create(ctx context.Context, in *pb.CreateVMRequest) *pb.CreateVMResponse {
+	err := db.Create(Sreapii(s).toDB()).Error
+	if err != nil {
+		return &pb.CreateVMResponse{XApi: apiv, success: False}, err
+	}
+
+	return &pb.CreateVMResponse{XApi: apiv, success: True}, nil
+}
+
+/*
 // Get vm
 func (s *Server) Get(ctx context.Context, in *pb.GetRequest) (*pb.GetResponse, error) {
 	vm := new(pb.Virtualmachine)
@@ -274,7 +365,7 @@ func (s *Server) Delete(ctx context.Context, in *pb.DeleteRequest) (*pb.DeleteRe
 		return &pb.DeleteResponse{XApi: apiv, Success: true}, err
 	}
 	return &pb.DeleteResponse{XApi: apiv, Success: true}, nil
-}
+}*/
 
 func grpcHandler(grpcServer *grpc.Server, otherHandler http.Handler) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
