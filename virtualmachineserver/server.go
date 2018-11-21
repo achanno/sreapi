@@ -41,18 +41,61 @@ var (
 	demoCertPool *x509.CertPool
 )
 
-type Project_db struct {
+// Sreapii interface used to convert between databse entries and protobuf messages
+type Sreapii interface {
+	toDB() interface{}
+	toProto() interface{}
+}
+
+type projectdb struct {
 	gorm.Model
 	Name string
 }
 
-type Stack_db struct {
+type project pb.Project
+type stack pb.Stack
+type role pb.Role
+type vm pb.Virtualmachine
+
+func (p *projectdb) toDB() interface{} {
+	return p
+}
+
+func (p *projectdb) toProto() interface{} {
+	return &pb.Project{Name: p.Name}
+}
+
+func (p *project) toDB() interface{} {
+	return &projectdb{Name: p.Name}
+}
+
+func (p *project) toProto() interface{} {
+	return p
+}
+
+type stackdb struct {
 	gorm.Model
 	Project string
 	Name    string
 }
 
-type Role_db struct {
+func (p *stackdb) toDB() interface{} {
+	return p
+}
+func (p *stackdb) toProto() interface{} {
+	return &pb.Stack{name: p.name}
+}
+
+func (p *stack) toDB() interface{} {
+	project = "test" // Grab from db?
+	return &stackdb{Name: p.Name, Project: project}
+}
+
+func (p *stack) toProto() interface{} {
+	return p
+}
+
+type roledb struct {
 	gorm.Model
 	Project    string
 	Stack      string
@@ -60,12 +103,42 @@ type Role_db struct {
 	ParentRole string
 }
 
-type Virtualmachine_db struct {
+func (p *roledb) toDB() interface{} {
+	return p
+}
+
+func (p *roledb) toProto() interface{} {
+	return &pb.Stack{name: p.Name}
+}
+
+func (p *role) toDB() interface{} {
+	return &roledb{Name: p.name, Stack: "test", Project: "test", ParentRole: "someotherrole"}
+}
+func (p *role) toProto() interface{} {
+	return p
+}
+
+type vmdb struct {
 	gorm.Model
 	Project  string
 	Stack    string
 	Role     string
 	Hostname string
+}
+
+func (p *vmdb) toDB() interface{} {
+	return p
+}
+func (p *vmdb) toProto() interface{} {
+	return &pb.Virtualmachine{Hostname: p.Hostname}
+}
+
+func (p *vm) toDB() interface{} {
+	return &vmdb{Hostname: p.Hostname, Project: "test", stack: "test", Role: "Test"}
+}
+
+func (p *vm) toProto() interface{} {
+	return p
 }
 
 func initDBConnection() {
@@ -90,7 +163,13 @@ type VMServer struct{}
 
 // List Projects
 func (s *ProjectServer) List(ctx context.Context, in *pb.ListProjectRequest) (*pb.ListProjectResponse, error) {
-	return nil, nil
+	var results []projectdb
+	db.Find(&results)
+	var resultsproto []pb.Project
+	for x := range results {
+		resultsproto = append(resultsproto, Sreapii.toProto(results[x]))
+	}
+	return &pb.ProjectListResponse{XApi: apiv, Projects: resultsproto}, nil
 }
 
 // List Stacks
