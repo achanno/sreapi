@@ -166,35 +166,42 @@ type VMServer struct{}
 func (s *ProjectServer) List(ctx context.Context, in *pb.ListProjectRequest) (*pb.ListProjectResponse, error) {
 	var results []projectdb
 	db.Find(&results)
-	var resultsproto []pb.Project
+	resultsproto := make([]*pb.Project, 0)
 
 	for x := range results {
-		var res projectdb
-		resultsproto = append(resultsproto, Sreapii(&(res.(projectdb)).toProto())
+		res := Sreapii(&results[x]).toProto()
+		resultsproto = append(resultsproto, res.(*pb.Project))
 	}
-	return &pb.ProjectListResponse{XApi: apiv, Projects: resultsproto}, nil
+	return &pb.ListProjectResponse{XApi: apiv, Projects: resultsproto}, nil
 }
 
 // List Stacks
 func (s *StackServer) List(ctx context.Context, in *pb.ListStackRequest) (*pb.ListStackResponse, error) {
 	var results []stackdb
-	db.Find(&results)
-	var resultsproto []pb.Stack
+	db.Where("project = ?", in.Project).Find(&results)
+	resultsproto := make([]*pb.Stack, 0)
+
 	for x := range results {
-		resultsproto = append(resultsproto, Sreapii.toProto(results[x]))
+		res := Sreapii(&results[x]).toProto()
+		resultsproto = append(resultsproto, res.(*pb.Stack))
 	}
-	return nil, &pb.StackListResponse{XApi: apiv, Stacks: resultsproto}
+
+	return &pb.ListStackResponse{XApi: apiv, Stacks: resultsproto}, nil
 }
 
 // List Roles
 func (s *RoleServer) List(ctx context.Context, in *pb.ListRoleRequest) (*pb.ListRoleResponse, error) {
 	var results []roledb
 	db.Find(&results)
-	var resultsproto []pb.Role
+
+	resultsproto := make([]*pb.Role, 0)
+
 	for x := range results {
-		resultsproto = append(resultsproto, Sreapii.toProto(results[x]))
+		res := Sreapii(&results[x]).toProto()
+		resultsproto = append(resultsproto, res.(*pb.Role))
 	}
-	return &pb.RoleListResponse{XApi: apiv, Roles: resultsproto}, nil
+
+	return &pb.ListRoleResponse{XApi: apiv, Roles: resultsproto}, nil
 }
 
 // List vms
@@ -229,35 +236,54 @@ func (s *VMServer) List(ctx context.Context, in *pb.ListVMRequest) (*pb.ListVMRe
 
 		log.Printf("Addr of vms: %p len: %d data: %v", vms, len(vms), &vms)*/
 	var results []vmdb
-	db.Find(&results)
-	var resultsproto []pb.Virtualmachine
+	db.Where("project = ? AND stack = ? AND role = ?", in.Project, in.Stack, in.Role).Find(&results)
+	resultsproto := make([]*pb.Virtualmachine, 0)
+
 	for x := range results {
-		resultsproto = append(resultsproto, Sreapii.toProto(results[x]))
+		res := Sreapii(&results[x]).toProto()
+		resultsproto = append(resultsproto, res.(*pb.Virtualmachine))
 	}
-	return &pb.ListResponse{XApi: apiv, Vms: resultsproto}, nil
+	return &pb.ListVMResponse{XApi: apiv, Vms: resultsproto}, nil
 }
 
 // Get functions
 
 // Get Project
-func (s *ProjectServer) Get(ctx context.Context, in *pb.GetProjectRequest) *pb.GetProjectResponse {
-	var result projectdb
-	db.Where("name = ?", s.Name).Find(&result)
-	return &pb.GetProjectResponse{XApi: apiv, Name: result.Name}, nil
+func (s *ProjectServer) Get(ctx context.Context, in *pb.GetProjectRequest) (*pb.GetProjectResponse, error) {
+	var results []stackdb
+	resultsproto := make([]*pb.Stack, 0)
+	db.Where("project = ?", in.Project).Find(&results)
+	for x := range results {
+		res := Sreapii(&results[x]).toProto()
+		resultsproto = append(resultsproto, res.(*pb.Stack))
+	}
+	return &pb.GetProjectResponse{XApi: apiv, Stacks: resultsproto}, nil
 }
 
 // Get stack
-func (s *StackServer) Get(ctx context.Context, in *pb.GetStackRequest) *pb.GetStackResponse {
-	var result stackdb
-	db.Where("name = ?", s.Name).Find(&result)
-	return &pb.GetStackResponse{XApi: apiv, Name: result.Name}, nil
+func (s *StackServer) Get(ctx context.Context, in *pb.GetStackRequest) (*pb.GetStackResponse, error) {
+	var results []roledb
+	resultsproto := make([]*pb.Role, 0)
+	db.Where("project = ? AND stack = ?", in.Project, in.Stack).Find(&results)
+	for x := range results {
+		res := Sreapii(&results[x]).toProto()
+		resultsproto = append(resultsproto, res.(*pb.Role))
+	}
+	return &pb.GetStackResponse{XApi: apiv, Roles: resultsproto}, nil
 }
 
 // Get Role
-func (s *RoleServer) Get(ctx context.Context, in *pb.GetRoleRequest) *pb.GetRoleRequest {
-	var result roledb
-	db.Where("name = ?", s.Name).Find(&result)
-	return &pb.GetRoleResponse{XApi: apiv, Name: result.Name}, nil
+func (s *RoleServer) Get(ctx context.Context, in *pb.GetRoleRequest) (*pb.GetRoleResponse, error) {
+	var results []vmdb
+	resultsproto := make([]*pb.Virtualmachine, 0)
+	db.Where("project = ? AND stack = ? AND role = ?", in.Project, in.Stack, in.Role).Find(&results)
+
+	for x := range results {
+		res := Sreapii(&results[x]).toProto()
+		resultsproto = append(resultsproto, res.(*pb.Virtualmachine))
+	}
+
+	return &pb.GetRoleResponse{XApi: apiv, Vms: resultsproto}, nil
 }
 
 // Get VM
