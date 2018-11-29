@@ -232,7 +232,7 @@ message GetVMRequest {
 
 message GetVMResponse {
   string _api = 1;
-  Virtualmachine vm = 2;
+  repeated Virtualmachine vms = 2;
 }
 
 message CreateVMRequest {
