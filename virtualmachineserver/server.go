@@ -64,11 +64,11 @@ func (p *projectdb) toProto() interface{} {
 	return &pb.Project{Name: p.Name}
 }
 
-func (p *project) toDB() interface{} {
+func (p *ProjectServer) toDB() interface{} {
 	return &projectdb{Name: p.Name}
 }
 
-func (p *project) toProto() interface{} {
+func (p *ProjectServer) toProto() interface{} {
 	return p
 }
 
@@ -160,13 +160,6 @@ type RoleServer struct{}
 // VMServer t
 type VMServer struct{}
 
-func dbstr(input string) string {
-	if input == "" {
-		return "%"
-	}
-	return input
-}
-
 // List functions
 
 // List Projects
@@ -185,7 +178,7 @@ func (s *ProjectServer) List(ctx context.Context, in *pb.ListProjectRequest) (*p
 // List Stacks
 func (s *StackServer) List(ctx context.Context, in *pb.ListStackRequest) (*pb.ListStackResponse, error) {
 	var results []stackdb
-	db.Where("project LIKE ?", dbstr(in.Project)).Find(&results)
+	db.Where("project LIKE ?", in.Project).Find(&results)
 	resultsproto := make([]*pb.Stack, 0)
 
 	for x := range results {
@@ -199,7 +192,7 @@ func (s *StackServer) List(ctx context.Context, in *pb.ListStackRequest) (*pb.Li
 // List Roles
 func (s *RoleServer) List(ctx context.Context, in *pb.ListRoleRequest) (*pb.ListRoleResponse, error) {
 	var results []roledb
-	db.Where("project LIKE ? AND stack LIKE ?", dbstr(in.Project), dbstr(in.Stack)).Find(&results)
+	db.Find(&results)
 
 	resultsproto := make([]*pb.Role, 0)
 
@@ -243,9 +236,7 @@ func (s *VMServer) List(ctx context.Context, in *pb.ListVMRequest) (*pb.ListVMRe
 
 		log.Printf("Addr of vms: %p len: %d data: %v", vms, len(vms), &vms)*/
 	var results []vmdb
-	db.Where(
-		"project LIKE ? AND stack LIKE ? AND role LIKE ?",
-		dbstr(in.Project), dbstr(in.Stack), dbstr(in.Role)).Find(&results)
+	db.Where("project = ? AND stack = ? AND role = ?", in.Project, in.Stack, in.Role).Find(&results)
 	resultsproto := make([]*pb.Virtualmachine, 0)
 
 	for x := range results {
@@ -261,7 +252,7 @@ func (s *VMServer) List(ctx context.Context, in *pb.ListVMRequest) (*pb.ListVMRe
 func (s *ProjectServer) Get(ctx context.Context, in *pb.GetProjectRequest) (*pb.GetProjectResponse, error) {
 	var results []stackdb
 	resultsproto := make([]*pb.Stack, 0)
-	db.Where("project LIKE ?", dbstr(in.Project)).Find(&results)
+	db.Where("project = ?", in.Project).Find(&results)
 	for x := range results {
 		res := Sreapii(&results[x]).toProto()
 		resultsproto = append(resultsproto, res.(*pb.Stack))
@@ -273,7 +264,7 @@ func (s *ProjectServer) Get(ctx context.Context, in *pb.GetProjectRequest) (*pb.
 func (s *StackServer) Get(ctx context.Context, in *pb.GetStackRequest) (*pb.GetStackResponse, error) {
 	var results []roledb
 	resultsproto := make([]*pb.Role, 0)
-	db.Where("project LIKE ? AND stack LIKE ?", dbstr(in.Project), dbstr(in.Stack)).Find(&results)
+	db.Where("project = ? AND stack = ?", in.Project, in.Stack).Find(&results)
 	for x := range results {
 		res := Sreapii(&results[x]).toProto()
 		resultsproto = append(resultsproto, res.(*pb.Role))
@@ -285,7 +276,7 @@ func (s *StackServer) Get(ctx context.Context, in *pb.GetStackRequest) (*pb.GetS
 func (s *RoleServer) Get(ctx context.Context, in *pb.GetRoleRequest) (*pb.GetRoleResponse, error) {
 	var results []vmdb
 	resultsproto := make([]*pb.Virtualmachine, 0)
-	db.Where("project LIKE ? AND stack LIKE ? AND role LIKE ?", dbstr(in.Project), dbstr(in.Stack), dbstr(in.Role)).Find(&results)
+	db.Where("project = ? AND stack = ? AND role = ?", in.Project, in.Stack, in.Role).Find(&results)
 
 	for x := range results {
 		res := Sreapii(&results[x]).toProto()
@@ -298,10 +289,8 @@ func (s *RoleServer) Get(ctx context.Context, in *pb.GetRoleRequest) (*pb.GetRol
 // Get VM
 func (s *VMServer) Get(ctx context.Context, in *pb.GetVMRequest) (*pb.GetVMResponse, error) {
 	var results []vmdb
-	db.Where(
-		"project LIKE ? AND stack LIKE ? AND role LIKE ? AND hostname like ?",
-		dbstr(in.Project), dbstr(in.Stack), dbstr(in.Role), dbstr(in.Hostname)).Find(&results)
 	resultsproto := make([]*pb.Virtualmachine, 0)
+	db.Where("name = ?", in.Hostname).Find(&results)
 
 	for x := range results {
 		res := Sreapii(&results[x]).toProto()
@@ -314,7 +303,8 @@ func (s *VMServer) Get(ctx context.Context, in *pb.GetVMRequest) (*pb.GetVMRespo
 
 // Create Project
 func (s *ProjectServer) Create(ctx context.Context, in *pb.CreateProjectRequest) (*pb.CreateProjectResponse, error) {
-	err := db.Create(Sreapii(s).toDB()).Error
+	var p project
+	err := db.Create(Sreapii(p).toDB()).Error
 	if err != nil {
 		return &pb.CreateProjectResponse{XApi: apiv, Success: false}, err
 	}
